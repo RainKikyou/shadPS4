@@ -13,7 +13,7 @@ static IR::Inst* SearchChain(IR::Inst* inst, u32 lane) {
             // We found a possible write lane source, return it.
             return inst;
         }
-        inst = inst->Arg(0).InstRecursive();
+        inst = inst->Arg(0).Inst();
     }
     return inst;
 }
@@ -35,17 +35,17 @@ static bool IsPossibleToEliminate(IR::Inst* inst, u32 lane) {
             continue;
         }
         // If there are other instructions in-between that use the value we can't eliminate.
-        if (inst->GetOpcode() != IR::Opcode::ReadLane && inst->GetOpcode() != IR::Opcode::Phi) {
+        if (inst->GetOpcode() != IR::Opcode::ReadLane && inst->GetOpcode() != IR::Opcode::Phi &&
+            inst->GetOpcode() != IR::Opcode::UndefU32) {
             return false;
         }
-        // Visit the right most arguments first
         for (size_t arg = inst->NumArgs(); arg--;) {
             auto arg_value{inst->Arg(arg)};
             if (arg_value.IsImmediate()) {
                 continue;
             }
             // Queue instruction if it hasn't been visited
-            IR::Inst* arg_inst{arg_value.InstRecursive()};
+            IR::Inst* arg_inst{arg_value.Inst()};
             if (std::ranges::find(visited, arg_inst) == visited.end()) {
                 visited.push_back(arg_inst);
                 queue.push(arg_inst);
@@ -74,27 +74,29 @@ static IR::Value GetRealValue(PhiMap& phi_map, IR::Inst* inst, u32 lane) {
         // Create new phi and insert it right before the old one.
         const auto insert_point = IR::Block::InstructionList::s_iterator_to(*inst);
         IR::Block* block = inst->GetParent();
-        IR::Inst* new_phi{&*block->PrependNewInst(insert_point, IR::Opcode::Phi)};
+        IR::Inst* const new_phi{&*block->PrependNewInst(insert_point, IR::Opcode::Phi)};
         new_phi->SetFlags(IR::Type::U32);
         it->second = new_phi;
 
         // Gather all arguments.
-        boost::container::static_vector<IR::Value, 5> phi_args;
+        boost::container::small_vector<IR::Value, 5> phi_args;
         for (size_t arg_index = 0; arg_index < inst->NumArgs(); arg_index++) {
-            IR::Inst* arg_prod = inst->Arg(arg_index).InstRecursive();
+            IR::Inst* arg_prod = inst->Arg(arg_index).Inst();
             const IR::Value arg = GetRealValue(phi_map, arg_prod, lane);
             phi_args.push_back(arg);
         }
-        const IR::Value arg0 = phi_args[0].Resolve();
-        if (std::ranges::all_of(phi_args,
-                                [&](const IR::Value& arg) { return arg.Resolve() == arg0; })) {
-            new_phi->ReplaceUsesWith(arg0);
-        } else {
-            for (size_t arg_index = 0; arg_index < inst->NumArgs(); arg_index++) {
-                new_phi->AddPhiOperand(inst->PhiBlock(arg_index), phi_args[arg_index]);
-            }
+        const IR::Value arg0 = phi_args[0];
+        if (std::ranges::all_of(phi_args, [&](const IR::Value& arg) { return arg == arg0; })) {
+            new_phi->ReplaceUsesWithAndRemove(arg0);
+            return arg0;
+        }
+        for (size_t arg_index = 0; arg_index < inst->NumArgs(); arg_index++) {
+            new_phi->AddPhiOperand(inst->PhiBlock(arg_index), phi_args[arg_index]);
         }
         return IR::Value{new_phi};
+    }
+    if (inst->GetOpcode() == IR::Opcode::UndefU32) {
+        return IR::Value{inst};
     }
     UNREACHABLE();
 }
@@ -111,7 +113,7 @@ void ReadLaneEliminationPass(IR::Program& program) {
             }
 
             const u32 lane = inst.Arg(1).U32();
-            IR::Inst* prod = inst.Arg(0).InstRecursive();
+            IR::Inst* prod = inst.Arg(0).Inst();
 
             // Check simple case of no control flow and phis
             if (prod = SearchChain(prod, lane); prod->GetOpcode() == IR::Opcode::WriteLane) {
