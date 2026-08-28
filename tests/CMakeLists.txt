@@ -13,11 +13,8 @@ set(TEST_TARGETS
     shadps4_settings_test
     shadps4_ngs2_test
     shadps4_gcn_test
-<<<<<<< HEAD
     shadps4_cache_storage_test
-=======
     shadps4_presentation_queue_test
->>>>>>> pr-4721
 )
 
 set(SETTINGS_TEST_SOURCES
@@ -172,7 +169,6 @@ set(GCN_TEST_SOURCES
 add_executable(shadps4_settings_test ${SETTINGS_TEST_SOURCES})
 add_executable(shadps4_ngs2_test ${NGS2_TEST_SOURCES})
 add_executable(shadps4_gcn_test ${GCN_TEST_SOURCES})
-<<<<<<< HEAD
 add_executable(shadps4_cache_storage_test
     ${CMAKE_SOURCE_DIR}/src/video_core/cache_archive.cpp
     ${CMAKE_SOURCE_DIR}/src/video_core/host_shader_cache.cpp
@@ -180,9 +176,7 @@ add_executable(shadps4_cache_storage_test
     test_host_shader_cache.cpp
     test_cache_task_queue.cpp
 )
-=======
 add_executable(shadps4_presentation_queue_test test_presentation_queue.cpp)
->>>>>>> pr-4721
 
 foreach(t ${TEST_TARGETS})
     target_include_directories(${t} PRIVATE
@@ -222,11 +216,8 @@ target_link_libraries(shadps4_gcn_test PRIVATE
     spdlog::spdlog
     half::half
 )
-<<<<<<< HEAD
 target_link_libraries(shadps4_cache_storage_test PRIVATE GTest::gtest_main miniz::miniz)
-=======
 target_link_libraries(shadps4_presentation_queue_test PRIVATE GTest::gtest_main)
->>>>>>> pr-4721
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
     CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")

@@ -204,12 +204,9 @@ bool Instance::CreateDevice() {
                           vk::PhysicalDeviceShaderAtomicFloat2FeaturesEXT,
                           vk::PhysicalDeviceWorkgroupMemoryExplicitLayoutFeaturesKHR,
                           vk::PhysicalDeviceImage2DViewOf3DFeaturesEXT,
-<<<<<<< HEAD
                           vk::PhysicalDeviceFragmentShaderBarycentricFeaturesKHR,
-                          vk::PhysicalDeviceProvokingVertexFeaturesEXT>();
-=======
+                          vk::PhysicalDeviceProvokingVertexFeaturesEXT,
                           vk::PhysicalDeviceSwapchainMaintenance1FeaturesEXT>();
->>>>>>> pr-4721
     features = feature_chain.get().features;
 
     const vk::StructureChain properties_chain = physical_device.getProperties2<
