@@ -192,17 +192,6 @@ void DataBase::Open() {
     opened.store(true, std::memory_order_release);
 }
 
-void DataBase::Reset() {
-    Close();
-    std::error_code ec{};
-    std::filesystem::remove_all(cache_path, ec);
-    if (ec) {
-        LOG_ERROR(Render, "Failed to delete the cache at {}: {}", cache_path.string().c_str(),
-                  ec.message());
-    }
-    ar_is_read_only = true;
-    Open();
-}
 
 void DataBase::Close() {
     if (!opened.exchange(false, std::memory_order_acq_rel))
