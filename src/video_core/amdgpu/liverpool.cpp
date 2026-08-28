@@ -865,7 +865,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                 while (!wait_reg_mem->Test(regs.reg_array)) {
                     if (!wr_logged && std::chrono::steady_clock::now() - wr_spin_start > std::chrono::seconds(3)) {
                         wr_logged = true;
-                        LOG_ERROR(Render, "[SPIN] WaitRegMem stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(wait_addr), u32(wait_reg_mem->mem_space.Value()), u32(wait_reg_mem->function.Value()), wait_reg_mem->ref, wait_reg_mem->mask, *wait_addr);
+                        LOG_ERROR(Render, "[SPIN] WaitRegMem stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(wait_reg_mem->Address<u64*>()), u32(wait_reg_mem->mem_space.Value()), u32(wait_reg_mem->function.Value()), wait_reg_mem->ref, wait_reg_mem->mask, *wait_reg_mem->Address<u64*>());
                     }
                     YIELD_GFX();
                 }
@@ -1215,7 +1215,7 @@ Liverpool::Task Liverpool::ProcessCompute(std::span<const u32> acb, u32 vqid) {
                 while (!wait_reg_mem->Test(regs.reg_array)) {
                     if (!wr_logged && std::chrono::steady_clock::now() - wr_spin_start > std::chrono::seconds(3)) {
                         wr_logged = true;
-                        LOG_ERROR(Render, "[SPIN] WaitRegMem stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(wait_addr), u32(wait_reg_mem->mem_space.Value()), u32(wait_reg_mem->function.Value()), wait_reg_mem->ref, wait_reg_mem->mask, *wait_addr);
+                        LOG_ERROR(Render, "[SPIN] WaitRegMem stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(wait_reg_mem->Address<u64*>()), u32(wait_reg_mem->mem_space.Value()), u32(wait_reg_mem->function.Value()), wait_reg_mem->ref, wait_reg_mem->mask, *wait_reg_mem->Address<u64*>());
                     }
                 YIELD_ASC(vqid);
             }
