@@ -393,6 +393,16 @@ bool Linker::Resolve(const std::string& name, Loader::SymbolType sym_type, Modul
                      Loader::SymbolRecord* return_info) {
     const auto ids = Common::SplitString(name, '#');
     if (ids.size() != 3) {
+        // Some imports reference plain symbol names without the '#lib#mod' suffix
+        // (e.g. compilerrt_abort_impl). Resolve them against the AeroLib stub table
+        // so the GOT slot is never left NULL (which would crash when called).
+        if (const auto* entry = AeroLib::FindByName(name.c_str()); entry != nullptr) {
+            return_info->name = entry->name;
+            return_info->virtual_address = AeroLib::GetStub(entry->nid);
+            LOG_WARNING(Core_Linker, "Linker: Stub resolved {} as {} (lib: unknown, mod: unknown)",
+                        name, entry->name);
+            return false;
+        }
         return_info->virtual_address = 0;
         return_info->name = name;
         LOG_ERROR(Core_Linker, "Not Resolved {}", name);

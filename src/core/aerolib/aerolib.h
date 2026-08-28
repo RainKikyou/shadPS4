@@ -12,6 +12,6 @@ struct NidEntry {
     const char* name;
 };
 
-const NidEntry* FindByNid(const char* nid);
+const NidEntry* FindByNid(const char* nid); NidEntry* FindByName(const char* name);
 
 } // namespace Core::AeroLib

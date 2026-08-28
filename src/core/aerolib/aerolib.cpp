@@ -32,4 +32,14 @@ const NidEntry* FindByNid(const char* nid) {
     return nullptr;
 }
 
+// Linear scan by name, as the table is sorted by NID.
+const NidEntry* FindByName(const char* name) {
+    for (const auto& entry : NIDS) {
+        if (std::strcmp(entry.name, name) == 0) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
+
 } // namespace Core::AeroLib
