@@ -10,8 +10,4 @@ Emulator::Emulator() {}
 Emulator::~Emulator() {}
 void Emulator::Shutdown() {}
 
-SignalDispatch::SignalDispatch() {}
-SignalDispatch::~SignalDispatch() {}
-void SignalDispatch::RemoveHandlers() {}
-
 } // namespace Core
