@@ -141,10 +141,23 @@ void Liverpool::Process(std::stop_token stoken) {
                 --num_submits;
                 {
                     std::scoped_lock lock2{submit_mutex};
+                    if (curr_qid == GfxQueueId) {
+                        --num_gfx_submits;
+                    }
                     submit_cv.notify_all();
+                }
+                if (curr_qid == GfxQueueId && flip_signal_armed) {
+                    // Fallback for a flip NOP not followed by an executed tail
+                    // (should not happen in practice).
+                    flip_signal_armed = false;
+                    if (rasterizer) {
+                        rasterizer->NotifyGuestFlip();
+                    }
+                    Platform::IrqC::Instance()->Signal(Platform::InterruptId::GfxFlip);
                 }
 
                 // Perform flip after the submission completes.
+
                 auto* port = vo_port.load(std::memory_order_acquire);
                 auto* drv = vo_driver.load(std::memory_order_acquire);
                 if (flip && port && drv) {
@@ -303,9 +316,15 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
 
                 switch (nop->data_block[0]) {
                 case PM4CmdNop::PayloadType::PatchedFlip: {
-                    // Flip is performed when the submission completes, not here.
+                    // Defer the flip signal until this DCB has fully executed.
+                    // PatchFlipRequest appends the frame fence (EOP tick / label)
+                    // AFTER this NOP, so signaling here would let the present
+                    // thread deliver the flip event before the fence value is
+                    // visible to the guest.
+                    flip_signal_armed = true;
                     break;
                 }
+
                 case PM4CmdNop::PayloadType::DebugMarkerPush: {
                     if (guest_markers_enabled) {
                         const auto marker_sz = nop->header.count.Value() * 2;
@@ -1000,6 +1019,15 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
         }
     }
 
+    if (flip_signal_armed) {
+        // Every packet after the flip NOP (fence writes included) has executed.
+        flip_signal_armed = false;
+        if (rasterizer) {
+            rasterizer->NotifyGuestFlip();
+        }
+        Platform::IrqC::Instance()->Signal(Platform::InterruptId::GfxFlip);
+    }
+
     if (ce_task.handle) {
         while (!ce_task.handle.done()) {
             RESUME_GFX(ce_task);
@@ -1011,6 +1039,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
 }
 
 template <bool is_indirect>
+
 Liverpool::Task Liverpool::ProcessCompute(std::span<const u32> acb, u32 vqid) {
     FIBER_ENTER(acb_task_name[vqid]);
     auto& queue = asc_queues[{vqid}];
@@ -1385,6 +1414,7 @@ void Liverpool::SubmitGfx(std::span<const u32> dcb, std::span<const u32> ccb,
 
     std::scoped_lock lk{submit_mutex};
     ++num_submits;
+    ++num_gfx_submits;
     submit_cv.notify_one();
 }
 

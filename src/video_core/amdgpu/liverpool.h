@@ -15,6 +15,8 @@
 #include <queue>
 
 #include "common/assert.h"
+#include "common/logging/log.h"
+
 #include "common/slot_vector.h"
 #include "common/types.h"
 #include "common/unique_function.h"
@@ -89,6 +91,22 @@ public:
     void WaitGpuIdle() noexcept {
         std::unique_lock lk{submit_mutex};
         submit_cv.wait(lk, [this] { return num_submits == 0; });
+    }
+
+    // Waits (bounded) until the gfx ring has fully drained. Unlike the
+    // submission-lock approach this does not wait for async compute rings,
+    // which some engines keep parked in WaitRegMem indefinitely. The timeout
+    // prevents deadlocks when ring progress depends on labels the guest writes
+    // only after submitDone.
+    void WaitForGfxRingDrain() {
+        using namespace std::chrono_literals;
+        std::unique_lock lk{submit_mutex};
+        const bool drained =
+            submit_cv.wait_for(lk, 2000ms, [this] { return num_gfx_submits.load() == 0; });
+        if (!drained) {
+            LOG_ERROR(Lib_GnmDriver, "[DRAIN] gfx ring not drained in 2s, {} submits still pending",
+                      num_gfx_submits.load());
+        }
     }
 
     bool IsGpuIdle() const {
@@ -244,7 +262,12 @@ private:
     std::atomic<Libraries::VideoOut::VideoOutDriver*> vo_driver{};
     std::jthread process_thread{};
     std::atomic<u32> num_submits{};
+    std::atomic<u32> num_gfx_submits{};
+    // Deferred flip signal: armed by the PatchedFlip NOP, delivered once the
+    // containing DCB has fully executed (GPU thread only).
+    bool flip_signal_armed{};
     std::atomic<u32> num_commands{};
+
     std::atomic<bool> submit_done{};
     std::mutex submit_mutex;
     std::condition_variable_any submit_cv;

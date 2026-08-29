@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <boost/container/small_vector.hpp>
 #include "common/lru_cache.h"
 #include "common/slot_vector.h"
@@ -128,7 +129,13 @@ public:
                                                        bool is_texel_buffer = false,
                                                        BufferId buffer_id = {});
 
+    /// Called by the GPU thread when a guest flip submit retires.
+    void NotifyGuestFlip() {
+        flip_stamp.fetch_add(1, std::memory_order_relaxed);
+    }
+
     /// Attempts to obtain a buffer without modifying the cache contents.
+
     [[nodiscard]] std::pair<Buffer*, u32> ObtainBufferForImage(VAddr gpu_addr, u32 size);
 
     /// Return true when a region is registered on the cache
@@ -208,6 +215,9 @@ private:
     std::unique_ptr<MemoryTracker> memory_tracker;
     StreamBuffer staging_buffer;
     StreamBuffer stream_buffer;
+    std::atomic<u64> flip_stamp{};
+    u64 unbounded_sync_stamp = ~0ull;
+
     StreamBuffer download_buffer;
     StreamBuffer device_buffer;
     Buffer gds_buffer;
