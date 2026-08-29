@@ -112,6 +112,33 @@ void Liverpool::Process(std::stop_token stoken) {
         curr_qid = -1;
 
         while (num_submits || num_commands) {
+            // diag-v11: main-loop stall watchdog. If nothing progresses for 4s we are stuck.
+            {
+                static auto ml_last = std::chrono::steady_clock::now();
+                static u64 ml_prev_cmds{}, ml_prev_subs{};
+                static int ml_reps = 0;
+                const auto ml_now = std::chrono::steady_clock::now();
+                if (ml_now - ml_last > std::chrono::seconds(4)) {
+                    ml_last = ml_now;
+                    const u64 cmds_now = num_commands;
+                    const u64 subs_now = num_submits.load();
+                    if (cmds_now == ml_prev_cmds && subs_now == ml_prev_subs) {
+                        ++ml_reps;
+                        u32 qsize = 0;
+                        {
+                            std::scoped_lock lock{mapped_queues[curr_qid].m_access};
+                            qsize = static_cast<u32>(mapped_queues[curr_qid].submits.size());
+                        }
+                        LOG_ERROR(Render, "[STUCK] main loop: cmds={} subs={} q{} size={} reps={}",
+                                  cmds_now, subs_now, curr_qid, qsize, ml_reps);
+                    } else {
+                        ml_reps = 0;
+                    }
+                    ml_prev_cmds = cmds_now;
+                    ml_prev_subs = subs_now;
+                }
+            }
+
             ProcessCommands();
 
             curr_qid = (curr_qid + 1) % num_mapped_queues;
@@ -126,15 +153,24 @@ void Liverpool::Process(std::stop_token stoken) {
                 }
                 task = queue.submits.front().task;
             }
-            const auto task_start = std::chrono::steady_clock::now();
+            static Task::Handle tk_handle{};
+            static auto tk_begin = std::chrono::steady_clock::now();
+            {
+                const auto now = std::chrono::steady_clock::now();
+                if (task != tk_handle) {
+                    tk_handle = task;
+                    tk_begin = now;
+                }
+            }
             task.resume();
             if (task.done()) {
                 const auto task_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                         std::chrono::steady_clock::now() - task_start)
+                                         std::chrono::steady_clock::now() - tk_begin)
                                          .count();
+                tk_handle = {};
                 if (task_ms > 500) {
-                    LOG_ERROR(Render, "[TASKT] gfx submit took {} ms, {} submits queued", task_ms,
-                              num_submits.load());
+                    LOG_ERROR(Render, "[TASKT] gfx submit total took {} ms, {} submits queued",
+                              task_ms, num_submits.load());
                 }
             }
 
