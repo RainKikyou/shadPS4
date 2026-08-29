@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: Copyright 2025 shadPS4 Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <chrono>
 #include "common/assert.h"
 #include "common/debug.h"
 #include "common/logging/log.h"
@@ -193,11 +194,12 @@ void Scheduler::SubmitExecution(SubmitInfo& info) {
     ImGui::Core::TextureManager::Submit();
     const auto submit_start = std::chrono::steady_clock::now();
     auto submit_result = instance.GetGraphicsQueue().submit(submit_info, info.fence);
-    const auto submit_ms =
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - submit_start)
-            .count();
+    const auto submit_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               std::chrono::steady_clock::now() - submit_start)
+                               .count();
     if (submit_ms > 200) {
-        LOG_ERROR(Render_Vulkan, "[SUBMIT] vkQueueSubmit took {} ms (signal_tick={})", submit_ms, signal_value);
+        LOG_ERROR(Render_Vulkan, "[SUBMIT] vkQueueSubmit took {} ms (signal_tick={})", submit_ms,
+                  signal_value);
     }
     ASSERT_MSG(submit_result != vk::Result::eErrorDeviceLost, "Device lost during submit");
 
@@ -209,12 +211,11 @@ void Scheduler::SubmitExecution(SubmitInfo& info) {
     if (gp_hb_now - gp_hb_last > std::chrono::seconds(2)) {
         gp_hb_last = gp_hb_now;
         const u64 gpu_now = master_semaphore.CurrentTick();
-        LOG_ERROR(Render_Vulkan, "[GPBEAT] gpu_tick={} last_submit_tick={} in_flight={}", gpu_now, signal_value,
-                  signal_value - gpu_now);
+        LOG_ERROR(Render_Vulkan, "[GPBEAT] gpu_tick={} last_submit_tick={} in_flight={}", gpu_now,
+                  signal_value, signal_value - gpu_now);
     }
 
     AllocateWorkerCommandBuffers();
-
 
     // Apply pending operations
     PopPendingOperations();

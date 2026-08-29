@@ -76,14 +76,16 @@ void MasterSemaphore::Wait(u64 tick) {
         const auto now = std::chrono::steady_clock::now();
         if (now - last_log > std::chrono::milliseconds(500)) {
             last_log = now;
-            const u64 elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - wait_start).count();
-            const auto [counter_result, counter] = instance.GetDevice().getSemaphoreCounterValue(*semaphore);
+            const u64 elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - wait_start).count();
+            const auto [counter_result, counter] =
+                instance.GetDevice().getSemaphoreCounterValue(*semaphore);
             LOG_ERROR(Render_Vulkan,
-                      "[WAITSEM] waiting tick={} current_counter={} elapsed={}ms counter_result={}", tick, counter, elapsed, vk::to_string(counter_result));
+                      "[WAITSEM] waiting tick={} current_counter={} elapsed={}ms counter_result={}",
+                      tick, counter, elapsed, vk::to_string(counter_result));
         }
     }
     Refresh();
-
 }
 
 } // namespace Vulkan
