@@ -222,6 +222,7 @@ private:
         struct Submission {
             Task::Handle task;
             std::optional<FlipRequest> flip{};
+            u32 dcb_dwords{};
         };
 
         std::mutex m_access{};

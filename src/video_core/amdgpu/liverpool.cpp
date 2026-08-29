@@ -125,12 +125,22 @@ void Liverpool::Process(std::stop_token stoken) {
                     if (cmds_now == ml_prev_cmds && subs_now == ml_prev_subs) {
                         ++ml_reps;
                         u32 qsize = 0;
+                        u32 front_dcb = 0;
+                        bool front_done = true;
                         {
                             std::scoped_lock lock{mapped_queues[curr_qid].m_access};
                             qsize = static_cast<u32>(mapped_queues[curr_qid].submits.size());
+                            if (!mapped_queues[curr_qid].submits.empty()) {
+                                const auto& front = mapped_queues[curr_qid].submits.front();
+                                front_dcb = front.dcb_dwords;
+                                front_done = front.task.done();
+                            }
                         }
-                        LOG_ERROR(Render, "[STUCK] main loop: cmds={} subs={} q{} size={} reps={}",
-                                  cmds_now, subs_now, curr_qid, qsize, ml_reps);
+                        LOG_ERROR(Render,
+                                  "[STUCK] main loop: cmds={} subs={} q{} size={} reps={} "
+                                  "front_dcb={}dw front_done={}",
+                                  cmds_now, subs_now, curr_qid, qsize, ml_reps, front_dcb,
+                                  front_done);
                     } else {
                         ml_reps = 0;
                     }
@@ -1487,7 +1497,7 @@ void Liverpool::SubmitGfx(std::span<const u32> dcb, std::span<const u32> ccb,
     auto task = ProcessGraphics(dcb, ccb);
     {
         std::scoped_lock lock{queue.m_access};
-        queue.submits.push({task.handle, std::move(flip)});
+        queue.submits.push({task.handle, std::move(flip), static_cast<u32>(dcb.size() / 4)});
     }
 
     std::scoped_lock lk{submit_mutex};
