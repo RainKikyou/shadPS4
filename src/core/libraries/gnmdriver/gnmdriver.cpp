@@ -2320,6 +2320,10 @@ static s32 SubmitCommandBuffersInternal(u32 count, const u32* dcb_gpu_addrs[],
         }
         // Associate the flip with the last command buffer in the batch.
         const bool is_last = (cbpair == count - 1);
+        if (count > 1 || ccb_size_in_bytes != 0) {
+            LOG_ERROR(Lib_GnmDriver, "[SUBMITI] cb={}/{} dcb={}B ccb={}B", cbpair, count,
+                      dcb_sizes_in_bytes[cbpair], ccb_size_in_bytes);
+        }
         liverpool->SubmitGfx(dcb_span, ccb_span, is_last ? flip : std::nullopt);
     }
 

@@ -188,6 +188,14 @@ Liverpool::Task Liverpool::ProcessCeUpdate(std::span<const u32> ccb) {
     FIBER_ENTER(ccb_task_name);
 
     while (!ccb.empty()) {
+        {
+            static auto ce_hb_last = std::chrono::steady_clock::now();
+            const auto ce_hb_now = std::chrono::steady_clock::now();
+            if (ce_hb_now - ce_hb_last > std::chrono::seconds(1)) {
+                ce_hb_last = ce_hb_now;
+                LOG_ERROR(Render, "[CEBEAT] ccb {} dwords remaining", ccb.size());
+            }
+        }
         ProcessCommands();
 
         const auto* header = reinterpret_cast<const PM4Header*>(ccb.data());
