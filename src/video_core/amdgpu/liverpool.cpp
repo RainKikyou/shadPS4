@@ -780,6 +780,19 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                         }
                     },
                     [] { Platform::IrqC::Instance()->Signal(Platform::InterruptId::GfxEop); });
+                {
+                    static auto eop_log_last = std::chrono::steady_clock::now();
+                    const auto eop_now = std::chrono::steady_clock::now();
+                    if (eop_now - eop_log_last > std::chrono::seconds(1)) {
+                        eop_log_last = eop_now;
+                        LOG_ERROR(
+                            Render,
+                            "[EOPW] EventWriteEop addr={:#x} data={:#x} data_sel={} event_type={}",
+                            reinterpret_cast<uintptr_t>(event_eop->Address<void*>()),
+                            event_eop->DataDWord(), u32(event_eop->data_sel.Value()),
+                            u32(event_eop->event_type.Value()));
+                    }
+                }
                 break;
             }
             case PM4ItOpcode::DmaData: {
@@ -827,6 +840,15 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                     std::memcpy(address, write_data->data, data_size);
                 } else {
                     UNREACHABLE();
+                }
+                {
+                    static auto wd_log_last = std::chrono::steady_clock::now();
+                    const auto wd_now = std::chrono::steady_clock::now();
+                    if (wd_now - wd_log_last > std::chrono::seconds(1)) {
+                        wd_log_last = wd_now;
+                        LOG_ERROR(Render, "[EOPW] WriteData addr={:#x} size={}",
+                                  reinterpret_cast<uintptr_t>(address), data_size);
+                    }
                 }
                 break;
             }
@@ -1416,6 +1438,15 @@ void Liverpool::SubmitGfx(std::span<const u32> dcb, std::span<const u32> ccb,
     ++num_submits;
     ++num_gfx_submits;
     submit_cv.notify_one();
+    {
+        static auto gq_log_last = std::chrono::steady_clock::now();
+        const auto gq_now = std::chrono::steady_clock::now();
+        if (gq_now - gq_log_last > std::chrono::seconds(2)) {
+            gq_log_last = gq_now;
+            LOG_ERROR(Render, "[SUBMITQ] dcb_dwords={} queued_submits={}", dcb.size(),
+                      num_submits.load());
+        }
+    }
 }
 
 void Liverpool::SubmitAsc(u32 gnm_vqid, std::span<const u32> acb) {
