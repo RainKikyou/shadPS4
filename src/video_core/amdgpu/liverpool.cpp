@@ -268,7 +268,10 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
         if (cp_hb_now - cp_hb_last > std::chrono::seconds(2)) {
             cp_hb_last = cp_hb_now;
             const u64 dcb_dwords_done = (reinterpret_cast<uintptr_t>(dcb.data()) - base_addr) / sizeof(u32);
-            LOG_ERROR(Render, "[CPBEAT] dcb consumed {} dwords, {} dwords remaining", dcb_dwords_done, dcb.size() / 4);
+            const u64 cp_gpu_tick = rasterizer ? rasterizer->GetScheduler().CurrentTick() : 0;
+            LOG_ERROR(Render, "[CPBEAT] dcb consumed {} dwords, {} dwords remaining; gpu_tick={}", dcb_dwords_done,
+                      dcb.size() / 4, cp_gpu_tick);
+
         }
         ProcessCommands();
 

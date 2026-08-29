@@ -201,9 +201,20 @@ void Scheduler::SubmitExecution(SubmitInfo& info) {
     }
     ASSERT_MSG(submit_result != vk::Result::eErrorDeviceLost, "Device lost during submit");
 
-
     master_semaphore.Refresh();
+
+    // diag-v4: GPU progress heartbeat - reveals whether the GPU queue is making progress
+    static auto gp_hb_last = std::chrono::steady_clock::now();
+    const auto gp_hb_now = std::chrono::steady_clock::now();
+    if (gp_hb_now - gp_hb_last > std::chrono::seconds(2)) {
+        gp_hb_last = gp_hb_now;
+        const u64 gpu_now = master_semaphore.CurrentTick();
+        LOG_ERROR(Render_Vulkan, "[GPBEAT] gpu_tick={} last_submit_tick={} in_flight={}", gpu_now, signal_value,
+                  signal_value - gpu_now);
+    }
+
     AllocateWorkerCommandBuffers();
+
 
     // Apply pending operations
     PopPendingOperations();
