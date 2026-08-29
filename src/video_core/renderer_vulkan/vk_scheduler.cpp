@@ -3,6 +3,7 @@
 
 #include "common/assert.h"
 #include "common/debug.h"
+#include "common/logging/log.h"
 #include "common/thread.h"
 #include "imgui/renderer/texture_manager.h"
 #include "video_core/renderer_vulkan/vk_instance.h"
@@ -190,8 +191,16 @@ void Scheduler::SubmitExecution(SubmitInfo& info) {
     };
 
     ImGui::Core::TextureManager::Submit();
+    const auto submit_start = std::chrono::steady_clock::now();
     auto submit_result = instance.GetGraphicsQueue().submit(submit_info, info.fence);
+    const auto submit_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - submit_start)
+            .count();
+    if (submit_ms > 200) {
+        LOG_ERROR(Render_Vulkan, "[SUBMIT] vkQueueSubmit took {} ms (signal_tick={})", submit_ms, signal_value);
+    }
     ASSERT_MSG(submit_result != vk::Result::eErrorDeviceLost, "Device lost during submit");
+
 
     master_semaphore.Refresh();
     AllocateWorkerCommandBuffers();

@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: Copyright 2020 yuzu Emulator Project
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#include <chrono>
 #include <limits>
+#include "common/logging/log.h"
 #include "video_core/renderer_vulkan/vk_instance.h"
 #include "video_core/renderer_vulkan/vk_master_semaphore.h"
 
@@ -62,9 +64,26 @@ void MasterSemaphore::Wait(u64 tick) {
         .pValues = &tick,
     };
 
-    while (instance.GetDevice().waitSemaphores(&wait_info, WAIT_TIMEOUT) != vk::Result::eSuccess) {
+    // diag-v3: bounded poll so a GPU that never signals produces a log instead of hanging forever
+    constexpr u64 poll_timeout = 50000000ull; // 50 ms
+    auto wait_start = std::chrono::steady_clock::now();
+    auto last_log = wait_start;
+    while (true) {
+        const auto wait_result = instance.GetDevice().waitSemaphores(&wait_info, poll_timeout);
+        if (wait_result == vk::Result::eSuccess) {
+            break;
+        }
+        const auto now = std::chrono::steady_clock::now();
+        if (now - last_log > std::chrono::milliseconds(500)) {
+            last_log = now;
+            const u64 elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - wait_start).count();
+            const auto [counter_result, counter] = instance.GetDevice().getSemaphoreCounterValue(*semaphore);
+            LOG_ERROR(Render_Vulkan,
+                      "[WAITSEM] waiting tick={} current_counter={} elapsed={}ms counter_result={}", tick, counter, elapsed, vk::to_string(counter_result));
+        }
     }
     Refresh();
+
 }
 
 } // namespace Vulkan

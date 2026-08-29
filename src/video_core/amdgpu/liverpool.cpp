@@ -262,7 +262,16 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
 
     const auto base_addr = reinterpret_cast<uintptr_t>(dcb.data());
     while (!dcb.empty()) {
+        // diag-v3: command processor heartbeat (throttled) to confirm progress
+        static auto cp_hb_last = std::chrono::steady_clock::now();
+        const auto cp_hb_now = std::chrono::steady_clock::now();
+        if (cp_hb_now - cp_hb_last > std::chrono::seconds(2)) {
+            cp_hb_last = cp_hb_now;
+            const u64 dcb_dwords_done = (reinterpret_cast<uintptr_t>(dcb.data()) - base_addr) / sizeof(u32);
+            LOG_ERROR(Render, "[CPBEAT] dcb consumed {} dwords, {} dwords remaining", dcb_dwords_done, dcb.size() / 4);
+        }
         ProcessCommands();
+
 
         const auto* header = reinterpret_cast<const PM4Header*>(dcb.data());
         const u32 type = header->type;
