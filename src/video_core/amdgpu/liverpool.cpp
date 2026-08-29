@@ -223,7 +223,7 @@ Liverpool::Task Liverpool::ProcessCeUpdate(std::span<const u32> ccb) {
                 const auto ib_spin_start = std::chrono::steady_clock::now();
                 bool ib_logged = false;
                 while (!task.handle.done()) {
-                    if (!ib_logged && std::chrono::steady_clock::now() - ib_spin_start > std::chrono::seconds(3)) {
+                    if (!ib_logged && std::chrono::steady_clock::now() - ib_spin_start > std::chrono::milliseconds(500)) {
                         ib_logged = true;
                         LOG_ERROR(Render, "[SPIN] IndirectBuffer wait stuck");
                     }
@@ -817,7 +817,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                     const auto ms_spin_start = std::chrono::steady_clock::now();
                     bool ms_logged = false;
                     while (!mem_semaphore->Signaled()) {
-                        if (!ms_logged && std::chrono::steady_clock::now() - ms_spin_start > std::chrono::seconds(3)) {
+                        if (!ms_logged && std::chrono::steady_clock::now() - ms_spin_start > std::chrono::milliseconds(500)) {
                             ms_logged = true;
                             LOG_ERROR(Render, "[SPIN] MemSemaphore wait stuck: addr={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(mem_semaphore->Address<u64*>()), *mem_semaphore->Address<u64*>());
                         }
@@ -839,7 +839,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                 const auto rw_spin_start = std::chrono::steady_clock::now();
                 bool rw_logged = false;
                 while (!rewind->Valid()) {
-                    if (!rw_logged && std::chrono::steady_clock::now() - rw_spin_start > std::chrono::seconds(3)) {
+                    if (!rw_logged && std::chrono::steady_clock::now() - rw_spin_start > std::chrono::milliseconds(500)) {
                         rw_logged = true;
                         LOG_ERROR(Render, "[SPIN] Rewind wait stuck: raw={:#x} offload={}", rewind->raw, u32(rewind->offload_enable.Value()));
                     }
@@ -865,7 +865,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                     auto vl_local_wrm = wait_reg_mem;
                     port->WaitVoLabel([&] {
                         if (!vl_pred()) {
-                            if (std::chrono::steady_clock::now() - vl_start > std::chrono::seconds(3)) {
+                            if (std::chrono::steady_clock::now() - vl_start > std::chrono::milliseconds(500)) {
                                 LOG_ERROR(Render, "[SPIN] WaitVoLabel stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(vl_local_wait_addr), u32(vl_local_wrm->mem_space.Value()), u32(vl_local_wrm->function.Value()), vl_local_wrm->ref, vl_local_wrm->mask, *vl_local_wait_addr);
                                 vl_start = std::chrono::steady_clock::now();
                             }
@@ -880,7 +880,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                 const auto wr_spin_start = std::chrono::steady_clock::now();
                 bool wr_logged = false;
                 while (!wait_reg_mem->Test(regs.reg_array)) {
-                    if (!wr_logged && std::chrono::steady_clock::now() - wr_spin_start > std::chrono::seconds(3)) {
+                    if (!wr_logged && std::chrono::steady_clock::now() - wr_spin_start > std::chrono::milliseconds(500)) {
                         wr_logged = true;
                         LOG_ERROR(Render, "[SPIN] WaitRegMem stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(wait_reg_mem->Address<u64*>()), u32(wait_reg_mem->mem_space.Value()), u32(wait_reg_mem->function.Value()), wait_reg_mem->ref, wait_reg_mem->mask, *wait_reg_mem->Address<u64*>());
                     }
@@ -897,7 +897,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                 const auto ib_spin_start = std::chrono::steady_clock::now();
                 bool ib_logged = false;
                 while (!task.handle.done()) {
-                    if (!ib_logged && std::chrono::steady_clock::now() - ib_spin_start > std::chrono::seconds(3)) {
+                    if (!ib_logged && std::chrono::steady_clock::now() - ib_spin_start > std::chrono::milliseconds(500)) {
                         ib_logged = true;
                         LOG_ERROR(Render, "[SPIN] IndirectBuffer wait stuck");
                     }
@@ -914,7 +914,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                 const auto ce_spin_start = std::chrono::steady_clock::now();
                 bool ce_logged = false;
                 while (cblock.ce_count <= cblock.de_count && !ce_task.handle.done()) {
-                    if (!ce_logged && std::chrono::steady_clock::now() - ce_spin_start > std::chrono::seconds(3)) {
+                    if (!ce_logged && std::chrono::steady_clock::now() - ce_spin_start > std::chrono::milliseconds(500)) {
                         ce_logged = true;
                         LOG_ERROR(Render, "[SPIN] WaitOnCeCounter stuck: ce_count={} de_count={}", cblock.ce_count, cblock.de_count);
                     }
@@ -1047,7 +1047,7 @@ Liverpool::Task Liverpool::ProcessCompute(std::span<const u32> acb, u32 vqid) {
                 const auto ib_spin_start = std::chrono::steady_clock::now();
                 bool ib_logged = false;
                 while (!task.handle.done()) {
-                    if (!ib_logged && std::chrono::steady_clock::now() - ib_spin_start > std::chrono::seconds(3)) {
+                    if (!ib_logged && std::chrono::steady_clock::now() - ib_spin_start > std::chrono::milliseconds(500)) {
                         ib_logged = true;
                         LOG_ERROR(Render, "[SPIN] IndirectBuffer wait stuck");
                     }
@@ -1112,7 +1112,7 @@ Liverpool::Task Liverpool::ProcessCompute(std::span<const u32> acb, u32 vqid) {
                 const auto rw_spin_start = std::chrono::steady_clock::now();
                 bool rw_logged = false;
                 while (!rewind->Valid()) {
-                    if (!rw_logged && std::chrono::steady_clock::now() - rw_spin_start > std::chrono::seconds(3)) {
+                    if (!rw_logged && std::chrono::steady_clock::now() - rw_spin_start > std::chrono::milliseconds(500)) {
                         rw_logged = true;
                         LOG_ERROR(Render, "[SPIN] Rewind wait stuck: raw={:#x} offload={}", rewind->raw, u32(rewind->offload_enable.Value()));
                     }
@@ -1214,7 +1214,7 @@ Liverpool::Task Liverpool::ProcessCompute(std::span<const u32> acb, u32 vqid) {
                     const auto ms_spin_start = std::chrono::steady_clock::now();
                     bool ms_logged = false;
                     while (!mem_semaphore->Signaled()) {
-                        if (!ms_logged && std::chrono::steady_clock::now() - ms_spin_start > std::chrono::seconds(3)) {
+                        if (!ms_logged && std::chrono::steady_clock::now() - ms_spin_start > std::chrono::milliseconds(500)) {
                             ms_logged = true;
                             LOG_ERROR(Render, "[SPIN] MemSemaphore wait stuck: addr={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(mem_semaphore->Address<u64*>()), *mem_semaphore->Address<u64*>());
                         }
@@ -1230,7 +1230,7 @@ Liverpool::Task Liverpool::ProcessCompute(std::span<const u32> acb, u32 vqid) {
                 const auto wr_spin_start = std::chrono::steady_clock::now();
                 bool wr_logged = false;
                 while (!wait_reg_mem->Test(regs.reg_array)) {
-                    if (!wr_logged && std::chrono::steady_clock::now() - wr_spin_start > std::chrono::seconds(3)) {
+                    if (!wr_logged && std::chrono::steady_clock::now() - wr_spin_start > std::chrono::milliseconds(500)) {
                         wr_logged = true;
                         LOG_ERROR(Render, "[SPIN] WaitRegMem stuck: addr={:#x} mem_space={} func={} ref={:#x} mask={:#x} cur={:#x}", reinterpret_cast<uintptr_t>(wait_reg_mem->Address<u64*>()), u32(wait_reg_mem->mem_space.Value()), u32(wait_reg_mem->function.Value()), wait_reg_mem->ref, wait_reg_mem->mask, *wait_reg_mem->Address<u64*>());
                     }
