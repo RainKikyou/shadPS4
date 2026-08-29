@@ -126,7 +126,17 @@ void Liverpool::Process(std::stop_token stoken) {
                 }
                 task = queue.submits.front().task;
             }
+            const auto task_start = std::chrono::steady_clock::now();
             task.resume();
+            if (task.done()) {
+                const auto task_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                         std::chrono::steady_clock::now() - task_start)
+                                         .count();
+                if (task_ms > 500) {
+                    LOG_ERROR(Render, "[TASKT] gfx submit took {} ms, {} submits queued", task_ms,
+                              num_submits.load());
+                }
+            }
 
             if (task.done()) {
                 std::optional<FlipRequest> flip;
