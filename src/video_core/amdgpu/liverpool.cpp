@@ -859,7 +859,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
                 if (port && port->IsVoLabel(wait_addr) &&
                     num_submits == mapped_queues[GfxQueueId].submits.size()) {
                 {
-                    const auto vl_start = std::chrono::steady_clock::now();
+                    auto vl_start = std::chrono::steady_clock::now();
                     auto vl_pred = [&] { return wait_reg_mem->Test(regs.reg_array); };
                     auto vl_local_wait_addr = wait_addr;
                     auto vl_local_wrm = wait_reg_mem;
