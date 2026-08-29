@@ -3,6 +3,7 @@
 
 #include <ranges>
 
+#include <chrono>
 #include "common/hash.h"
 #include "common/io_file.h"
 #include "common/path_util.h"
@@ -327,13 +328,19 @@ const GraphicsPipeline* PipelineCache::GetGraphicsPipeline() {
     const auto [it, is_new] = graphics_pipelines.try_emplace(graphics_key);
     if (is_new) {
         const auto pipeline_hash = std::hash<GraphicsPipelineKey>{}(graphics_key);
+        const auto gp_start = std::chrono::steady_clock::now();
         LOG_INFO(Render_Vulkan, "Compiling graphics pipeline {:#x}", pipeline_hash);
+        bool gp_logged = false;
 
         GraphicsPipeline::SerializationSupport sdata{};
         it.value() = std::make_unique<GraphicsPipeline>(
             instance, scheduler, desc_heap, profile, graphics_key, *pipeline_cache, infos,
             runtime_infos, fetch_shader, modules, sdata, false);
 
+        {
+            const auto gp_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - gp_start).count();
+            LOG_INFO(Render_Vulkan, "[PIPETIME] graphics pipeline {:#x} created in {} ms", pipeline_hash, gp_elapsed);
+        }
         RegisterPipelineData(graphics_key, pipeline_hash, sdata);
         ++num_new_pipelines;
 
@@ -357,12 +364,17 @@ const ComputePipeline* PipelineCache::GetComputePipeline() {
     const auto [it, is_new] = compute_pipelines.try_emplace(compute_key);
     if (is_new) {
         const auto pipeline_hash = std::hash<ComputePipelineKey>{}(compute_key);
+        const auto cp_start = std::chrono::steady_clock::now();
         LOG_INFO(Render_Vulkan, "Compiling compute pipeline {:#x}", pipeline_hash);
 
         ComputePipeline::SerializationSupport sdata{};
         it.value() = std::make_unique<ComputePipeline>(instance, scheduler, desc_heap, profile,
                                                        *pipeline_cache, compute_key, *infos[0],
                                                        modules[0], sdata, false);
+        {
+            const auto cp_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - cp_start).count();
+            LOG_INFO(Render_Vulkan, "[PIPETIME] compute pipeline {:#x} created in {} ms", pipeline_hash, cp_elapsed);
+        }
         RegisterPipelineData(compute_key, sdata);
         ++num_new_pipelines;
 
