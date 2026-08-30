@@ -69,6 +69,8 @@ static std::span<const u32> NextPacket(std::span<const u32> span, size_t offset)
     return span.subspan(offset);
 }
 
+static u32 g_last_proc_opcode{};
+
 Liverpool::Liverpool() {
     num_counter_pairs = Libraries::Kernel::sceKernelIsNeoMode() ? 16 : 8;
     process_thread = std::jthread{std::bind_front(&Liverpool::Process, this)};
@@ -141,11 +143,19 @@ void Liverpool::Process(std::stop_token stoken) {
                                 h3 = front.head[3];
                             }
                         }
+                        std::array<u32, 8> q_sizes{};
+                        for (u32 qi = 0; qi < num_mapped_queues && qi < q_sizes.size(); ++qi) {
+                            std::scoped_lock lock{mapped_queues[qi].m_access};
+                            q_sizes[qi] = static_cast<u32>(mapped_queues[qi].submits.size());
+                        }
                         LOG_ERROR(Render,
-                                  "[STUCK] main loop: cmds={} subs={} q{} size={} reps={} "
-                                  "front_dcb={}dw front_done={} head={:08x} {:08x} {:08x} {:08x}",
-                                  cmds_now, subs_now, curr_qid, qsize, ml_reps, front_dcb,
-                                  front_done, h0, h1, h2, h3);
+                                  "[STUCK] main loop: cmds={} subs={} nq={} q{} size={} reps={} "
+                                  "front_dcb={}dw front_done={} head={:08x} {:08x} {:08x} {:08x} "
+                                  "qsizes={} {} {} {} {} {} {} {} lastop={:02x}",
+                                  cmds_now, subs_now, num_mapped_queues, curr_qid, qsize, ml_reps,
+                                  front_dcb, front_done, h0, h1, h2, h3, q_sizes[0], q_sizes[1],
+                                  q_sizes[2], q_sizes[3], q_sizes[4], q_sizes[5], q_sizes[6],
+                                  q_sizes[7], last_proc_opcode);
                     } else {
                         ml_reps = 0;
                     }
@@ -378,6 +388,7 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
         case 3:
             const u32 count = header->type3.NumWords();
             const PM4ItOpcode opcode = header->type3.opcode;
+            g_last_proc_opcode = static_cast<u32>(opcode);
             switch (opcode) {
             case PM4ItOpcode::Nop: {
                 const auto* nop = reinterpret_cast<const PM4CmdNop*>(header);
