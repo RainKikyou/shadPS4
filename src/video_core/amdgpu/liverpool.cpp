@@ -71,6 +71,7 @@ static std::span<const u32> NextPacket(std::span<const u32> span, size_t offset)
 
 static u32 g_last_proc_opcode{};
 static u32 g_cp_progress{};
+static std::array<u64, 256> g_op_hist{};
 
 Liverpool::Liverpool() {
     num_counter_pairs = Libraries::Kernel::sceKernelIsNeoMode() ? 16 : 8;
@@ -380,6 +381,30 @@ Liverpool::Task Liverpool::ProcessGraphics(std::span<const u32> dcb, std::span<c
             const u64 dcb_dwords_done =
                 (reinterpret_cast<uintptr_t>(dcb.data()) - base_addr) / sizeof(u32);
             const u64 cp_gpu_tick = rasterizer ? rasterizer->GetScheduler().CurrentTick() : 0;
+            {
+                u64 top_five[5]{};
+                u32 top_ops[5]{};
+                for (u32 i = 0; i < 256; ++i) {
+                    const u64 v = g_op_hist[i];
+                    for (u32 j = 0; j < 5; ++j) {
+                        if (v > top_five[j]) {
+                            for (u32 k = 4; k > j; --k) {
+                                top_five[k] = top_five[k - 1];
+                                top_ops[k] = top_ops[k - 1];
+                            }
+                            top_five[j] = v;
+                            top_ops[j] = i;
+                            break;
+                        }
+                    }
+                }
+                LOG_ERROR(
+                    Render,
+                    "[HIST] top ops within PR: op{:02x}={} op{:02x}={} op{:02x}={} op{:02x}={} "
+                    "op{:02x}={}",
+                    top_ops[0], top_five[0], top_ops[1], top_five[1], top_ops[2], top_five[2],
+                    top_ops[3], top_five[3], top_ops[4], top_five[4]);
+            }
             LOG_ERROR(
                 Render,
                 "[CPBEAT] dcb consumed {} dwords, {} dwords remaining; gpu_tick={} submits={}",
