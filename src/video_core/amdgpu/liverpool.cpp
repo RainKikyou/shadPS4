@@ -129,7 +129,8 @@ void Liverpool::Process(std::stop_token stoken) {
                         u32 qsize = 0;
                         u32 front_dcb = 0;
                         bool front_done = true;
-                        u32 h0 = 0, h1 = 0, h2 = 0, h3 = 0;
+                        u32 h0 = 0, h1 = 0, h2 = 0, h3 = 0, h4 = 0, h5 = 0, h6 = 0, h7 = 0;
+                        u32 h8 = 0, h9 = 0, h10 = 0, h11 = 0, h12 = 0, h13 = 0, h14 = 0, h15 = 0;
                         {
                             std::scoped_lock lock{mapped_queues[curr_qid].m_access};
                             qsize = static_cast<u32>(mapped_queues[curr_qid].submits.size());
@@ -141,6 +142,18 @@ void Liverpool::Process(std::stop_token stoken) {
                                 h1 = front.head[1];
                                 h2 = front.head[2];
                                 h3 = front.head[3];
+                                h4 = front.head[4];
+                                h5 = front.head[5];
+                                h6 = front.head[6];
+                                h7 = front.head[7];
+                                h8 = front.head[8];
+                                h9 = front.head[9];
+                                h10 = front.head[10];
+                                h11 = front.head[11];
+                                h12 = front.head[12];
+                                h13 = front.head[13];
+                                h14 = front.head[14];
+                                h15 = front.head[15];
                             }
                         }
                         std::array<u32, 8> q_sizes{};
@@ -150,12 +163,15 @@ void Liverpool::Process(std::stop_token stoken) {
                         }
                         LOG_ERROR(Render,
                                   "[STUCK] main loop: cmds={} subs={} nq={} q{} size={} reps={} "
-                                  "front_dcb={}dw front_done={} head={:08x} {:08x} {:08x} {:08x} "
-                                  "qsizes={} {} {} {} {} {} {} {} lastop={:02x}",
+                                  "front_dcb={}dw front_done={} lastop={:02x} "
+                                  "head={:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} "
+                                  "{:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} "
+                                  "qsizes={} {} {} {} {} {} {} {}",
                                   cmds_now, subs_now, num_mapped_queues, curr_qid, qsize, ml_reps,
-                                  front_dcb, front_done, h0, h1, h2, h3, q_sizes[0], q_sizes[1],
-                                  q_sizes[2], q_sizes[3], q_sizes[4], q_sizes[5], q_sizes[6],
-                                  q_sizes[7], g_last_proc_opcode);
+                                  front_dcb, front_done, g_last_proc_opcode, h0, h1, h2, h3, h4, h5,
+                                  h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, q_sizes[0],
+                                  q_sizes[1], q_sizes[2], q_sizes[3], q_sizes[4], q_sizes[5],
+                                  q_sizes[6], q_sizes[7]);
                     } else {
                         ml_reps = 0;
                     }
@@ -1512,7 +1528,7 @@ void Liverpool::SubmitGfx(std::span<const u32> dcb, std::span<const u32> ccb,
 
     auto task = ProcessGraphics(dcb, ccb);
     {
-        std::array<u32, 4> head{};
+        std::array<u32, 16> head{};
         for (u32 i = 0; i < head.size() && i < dcb.size(); ++i) {
             head[i] = dcb[i];
         }
