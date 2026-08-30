@@ -223,6 +223,7 @@ private:
             Task::Handle task;
             std::optional<FlipRequest> flip{};
             u32 dcb_dwords{};
+            std::array<u32, 4> head{};
         };
 
         std::mutex m_access{};

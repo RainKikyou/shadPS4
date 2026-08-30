@@ -127,6 +127,7 @@ void Liverpool::Process(std::stop_token stoken) {
                         u32 qsize = 0;
                         u32 front_dcb = 0;
                         bool front_done = true;
+                        u32 h0 = 0, h1 = 0, h2 = 0, h3 = 0;
                         {
                             std::scoped_lock lock{mapped_queues[curr_qid].m_access};
                             qsize = static_cast<u32>(mapped_queues[curr_qid].submits.size());
@@ -134,13 +135,17 @@ void Liverpool::Process(std::stop_token stoken) {
                                 const auto& front = mapped_queues[curr_qid].submits.front();
                                 front_dcb = front.dcb_dwords;
                                 front_done = front.task.done();
+                                h0 = front.head[0];
+                                h1 = front.head[1];
+                                h2 = front.head[2];
+                                h3 = front.head[3];
                             }
                         }
                         LOG_ERROR(Render,
                                   "[STUCK] main loop: cmds={} subs={} q{} size={} reps={} "
-                                  "front_dcb={}dw front_done={}",
+                                  "front_dcb={}dw front_done={} head={:08x} {:08x} {:08x} {:08x}",
                                   cmds_now, subs_now, curr_qid, qsize, ml_reps, front_dcb,
-                                  front_done);
+                                  front_done, h0, h1, h2, h3);
                     } else {
                         ml_reps = 0;
                     }
@@ -1496,8 +1501,12 @@ void Liverpool::SubmitGfx(std::span<const u32> dcb, std::span<const u32> ccb,
 
     auto task = ProcessGraphics(dcb, ccb);
     {
+        std::array<u32, 4> head{};
+        for (u32 i = 0; i < head.size() && i < dcb.size(); ++i) {
+            head[i] = dcb[i];
+        }
         std::scoped_lock lock{queue.m_access};
-        queue.submits.push({task.handle, std::move(flip), static_cast<u32>(dcb.size() / 4)});
+        queue.submits.push({task.handle, std::move(flip), static_cast<u32>(dcb.size() / 4), head});
     }
 
     std::scoped_lock lk{submit_mutex};
