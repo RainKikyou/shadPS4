@@ -155,7 +155,7 @@ void Liverpool::Process(std::stop_token stoken) {
                                   cmds_now, subs_now, num_mapped_queues, curr_qid, qsize, ml_reps,
                                   front_dcb, front_done, h0, h1, h2, h3, q_sizes[0], q_sizes[1],
                                   q_sizes[2], q_sizes[3], q_sizes[4], q_sizes[5], q_sizes[6],
-                                  q_sizes[7], last_proc_opcode);
+                                  q_sizes[7], g_last_proc_opcode);
                     } else {
                         ml_reps = 0;
                     }
