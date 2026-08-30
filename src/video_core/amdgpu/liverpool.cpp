@@ -70,6 +70,7 @@ static std::span<const u32> NextPacket(std::span<const u32> span, size_t offset)
 }
 
 static u32 g_last_proc_opcode{};
+static u32 g_cp_progress{};
 
 Liverpool::Liverpool() {
     num_counter_pairs = Libraries::Kernel::sceKernelIsNeoMode() ? 16 : 8;
@@ -163,15 +164,15 @@ void Liverpool::Process(std::stop_token stoken) {
                         }
                         LOG_ERROR(Render,
                                   "[STUCK] main loop: cmds={} subs={} nq={} q{} size={} reps={} "
-                                  "front_dcb={}dw front_done={} lastop={:02x} "
+                                  "front_dcb={}dw front_done={} lastop={:02x} prog={} "
                                   "head={:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} "
                                   "{:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} {:08x} "
                                   "qsizes={} {} {} {} {} {} {} {}",
                                   cmds_now, subs_now, num_mapped_queues, curr_qid, qsize, ml_reps,
-                                  front_dcb, front_done, g_last_proc_opcode, h0, h1, h2, h3, h4, h5,
-                                  h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, q_sizes[0],
-                                  q_sizes[1], q_sizes[2], q_sizes[3], q_sizes[4], q_sizes[5],
-                                  q_sizes[6], q_sizes[7]);
+                                  front_dcb, front_done, g_last_proc_opcode, g_cp_progress, h0, h1,
+                                  h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15,
+                                  q_sizes[0], q_sizes[1], q_sizes[2], q_sizes[3], q_sizes[4],
+                                  q_sizes[5], q_sizes[6], q_sizes[7]);
                     } else {
                         ml_reps = 0;
                     }
